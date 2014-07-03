@@ -7,7 +7,7 @@ var API_DATA_URL = '/api/v1/data/';
 angular.module('jbrowse.directives', ['genjs.services'])
     .value('version', '0.1')
 
-    .directive('genBrowser', ['notify', function(notify){
+    .directive('genBrowser', ['notify', function (notify) {
         /**
          *  .. js::attribute:: genBrowser
          *
@@ -25,7 +25,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
          *      Extra fields:
          *      :config:        JBrowse config object.
          *      :onConnect:     On JBrowse initialize callback.
-         *      :afterAdd:      Hash with data types as keys and callback functions as values. Callback is executed after
+         *      :afterAdd:      Dict with data types as keys and callback functions as values. Callback is executed after
          *                      given data type is added to the browser.
          *
          *      Name variable:
@@ -39,7 +39,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
             },
             replace: true,
             templateUrl: '/static/genapp-jbrowse/partials/directives/genbrowser.html',
-            controller: ['$scope', 'notify', function($scope, notify){
+            controller: ['$scope', 'notify', function ($scope, notify) {
                 /**
                  * .. js::attribute:: JBrowse directive controller
                  *
@@ -66,13 +66,13 @@ angular.module('jbrowse.directives', ['genjs.services'])
 
                 // Handlers for each data object type.
                 typeHandlers = {
-                    'data:genome:fasta:': function(item){
+                    'data:genome:fasta:': function (item) {
                         var baseUrl = API_DATA_URL + item.id + '/download/seq',
                             lbl = item.static.name,
                             dontLoad = false;
 
                         if ($scope.browser.config.stores) {
-                             $scope.browser.getStore('refseqs', function(store){
+                             $scope.browser.getStore('refseqs', function (store) {
                                 var seqTrackName;
                                 if (!store) return;
                                 seqTrackName = store.config.label;
@@ -83,15 +83,13 @@ angular.module('jbrowse.directives', ['genjs.services'])
                                 // remove all tracks if we're changing sequence.
                                 self.removeTracks($scope.browser.config.tracks);
                                 delete $scope.browser.config.stores['refseqs'];
-                                if ('refseqs' in ($scope.browser._storeCache || {})) {
-                                    delete $scope.browser._storeCache['refseqs'];
-                                }
+                                delete $scope.browser._storeCache && $scope.browser._storeCache['refseqs'];
                             });
                         }
 
                         if (dontLoad) return;
 
-                        reloadRefSeqs(baseUrl + '/refSeqs.json').then(function(){
+                        reloadRefSeqs(baseUrl + '/refSeqs.json').then(function () {
                             addTrack({
                                 type:        'JBrowse/View/Track/Sequence',
                                 storeClass:  'JBrowse/Store/Sequence/StaticChunked',
@@ -103,7 +101,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
                             });
                         });
                     },
-                    'data:alignment:bam:': function(item) {
+                    'data:alignment:bam:': function (item) {
                         var url = API_DATA_URL + item.id + '/download/';
                         addTrack({
                             type: 'JBrowse/View/Track/Alignments2',
@@ -118,23 +116,23 @@ angular.module('jbrowse.directives', ['genjs.services'])
                 };
 
                 // Gets JBrowse track. Searches by label.
-                getTrackByLabel = function(lbl) {
+                getTrackByLabel = function (lbl) {
                     return _.findWhere($scope.browser.config.tracks || [], {label: lbl});
                 };
 
                 // Reloads reference sequences.
-                reloadRefSeqs = function(newRefseqsUrl) {
+                reloadRefSeqs = function (newRefseqsUrl) {
                     var deferredRefSeqs,
                         deferredSetup,
                         setupFn;
 
                     delete $scope.browser._deferred['reloadRefSeqs'];
                     deferredSetup = $scope.browser._getDeferred('reloadRefSeqs');
-                    setupFn = function() {
+                    setupFn = function () {
                         if (!('allRefs' in $scope.browser) || _.keys($scope.browser.allRefs).length == 0) {
                             return;
                         }
-                        _.each($scope.browser.allRefs, function(r){
+                        _.each($scope.browser.allRefs, function (r){
                             $scope.browser.refSeqSelectBox.addOption({
                                 label: r.name,
                                 value: r.name
@@ -163,7 +161,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
                 };
 
                 // Adds track to JBrowse.
-                addTrack = function(trackCfg) {
+                addTrack = function (trackCfg) {
                     var isSequenceTrack = trackCfg.type == 'JBrowse/View/Track/Sequence',
                         alreadyExists = getTrackByLabel(trackCfg.label) !== undefined;
 
@@ -186,7 +184,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
                             tracks: [trackCfg]
                         }
                     });
-                    $scope.browser.loadConfig().then(function() {
+                    $scope.browser.loadConfig().then(function () {
                         // NOTE: must be in this order, since navigateToLocation will set reference sequence name,
                         // which will be used for loading sequence chunks.
                         if (isSequenceTrack) {
@@ -198,7 +196,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
                 };
 
                 // Publicly exposed API.
-                this.addTrack = function(item) {
+                this.addTrack = function (item) {
                     if (item.type in typeHandlers) {
                         typeHandlers[item.type](item);
 
@@ -209,14 +207,14 @@ angular.module('jbrowse.directives', ['genjs.services'])
                         console.log('No handler for data type ' + item.type + ' defined.');
                     }
                 };
-                this.removeTracks = function(tracks) {
+                this.removeTracks = function (tracks) {
                     var trackCfgs = [],
                         t;
                     if (_.isString(tracks)) {
                         this.removeTracks([tracks]);
                         return;
                     } else if (_.isArray(tracks)) {
-                        _.each(tracks, function(trackCfg) {
+                        _.each(tracks, function (trackCfg) {
                             if (_.isString(trackCfg)) {
                                 t = getTrackByLabel(trackCfg);
                                 if (typeof t !== 'undefined') trackCfgs.push(t);
@@ -229,22 +227,22 @@ angular.module('jbrowse.directives', ['genjs.services'])
                 };
 
                 // Execute some misc. things before we initialize JBrowse
-                preConnect = function() {
+                preConnect = function () {
                     var $footer,
                         height;
 
-                    $footer = $($('footer').get(0));
+                    $footer = $('footer').first();
                     height = $(window).height() - $footer.height();
                     $('#' + self._defaults['containerID']).height(height);
                 };
                 // Executes some misc. things when JBrowse intilializes.
-                connector = function() {
+                connector = function () {
                     // remove global menu bar
-                    $scope.browser.afterMilestone('initView', function() {
+                    $scope.browser.afterMilestone('initView', function () {
                         dojo.destroy($scope.browser.menuBar);
                     });
                     // make sure tracks detached from the view ('hidden') actually are deleted in the browser instance
-                    $scope.browser.subscribe('/jbrowse/v1/c/tracks/hide', function(trackCfgs) {
+                    $scope.browser.subscribe('/jbrowse/v1/c/tracks/hide', function (trackCfgs) {
                         $scope.browser.publish('/jbrowse/v1/v/tracks/delete', trackCfgs);
                     });
 
@@ -254,12 +252,12 @@ angular.module('jbrowse.directives', ['genjs.services'])
                 };
 
                 // JBrowse initialization.
-                require(['JBrowse/Browser', 'dojo/io-query', 'dojo/json'], function(Browser, ioQuery, JSON) {
+                require(['JBrowse/Browser', 'dojo/io-query', 'dojo/json'], function (Browser, ioQuery, JSON) {
                     var config = $scope.genBrowserOptions.config || { containerID: self._defaults['containerID'] };
 
                     // monkey-patch. We need to remove default includes, since off-the-shelf version of JBrowse
                     // forces loading of jbrowse.conf even if we pass empty array as includes.
-                    Browser.prototype._configDefaults = function() {
+                    Browser.prototype._configDefaults = function () {
                         return {
                             containerId: 'gen-browser',
                             dataRoot: API_DATA_URL,
@@ -288,7 +286,7 @@ angular.module('jbrowse.directives', ['genjs.services'])
                     connector();
                 });
             }],
-            link: function($scope, $element, attrs, ctrl) {
+            link: function ($scope, $element, attrs, ctrl) {
                 var alias = attrs.name;
                 if (alias) {
                     $scope.$parent[alias] = ctrl;
