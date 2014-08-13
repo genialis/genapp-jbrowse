@@ -104,7 +104,8 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
                 'data:alignment:bam:': true,
                 'data:expression:polya:': true,
                 'data:variants:vcf:': true,
-                'data:annotation:gff3:': true
+                'data:annotation:gff3:': true,
+                'data:mappability:bcm:': true
             }
         };
 
@@ -140,6 +141,9 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
             },
             'data:annotation:gff3:': {
                 'output.gff.refs': /^tracks\/gff-track$/
+            },
+            'data:mappability:bcm:': {
+                'output.mappability.refs': commonPatterns['exprBigWig']
             }
         };
 

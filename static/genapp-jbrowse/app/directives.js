@@ -59,7 +59,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                 // Handlers for each data object type.
                 typeHandlers = {
-                    'data:genome:fasta:': function (item, customTrackCfg) {
+                    'data:genome:fasta:': function (item, customTrackCfg, gcCoverageTrackCfg) {
                         var baseUrl = API_DATA_URL + item.id + '/download/seq',
                             lbl = item.static.name,
                             purgeStoreDefer = $q.defer();
@@ -89,7 +89,10 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                         return purgeStoreDefer.promise.then(function () {
                             return reloadRefSeqs(baseUrl + '/refSeqs.json').then(function () {
-                                return addTrack($.extend({}, {
+                                var addTrackPromise,
+                                    bwFile;
+
+                                addTrackPromise = addTrack($.extend({}, {
                                     type:        'JBrowse/View/Track/Sequence',
                                     storeClass:  'JBrowse/Store/Sequence/StaticChunked',
                                     urlTemplate: 'seq/{refseq_dirpath}/{refseq}-',
@@ -98,6 +101,20 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                     label:       lbl,
                                     showTranslation: false
                                 }, customTrackCfg));
+
+                                bwFile = supportedTypes.find(item, 'output.twobit.refs', supportedTypes.patterns['bigWig']);
+                                if (bwFile) {
+                                    addTrackPromise.then(function () {
+                                        return addTrack($.extend({}, {
+                                            type: 'JBrowse/View/Track/Wiggle/XYPlot',
+                                            storeClass: 'JBrowse/Store/SeqFeature/BigWig',
+                                            label: item.static.name + ' GC Window',
+                                            urlTemplate: API_DATA_URL + item.id + '/download/' + bwFile
+                                        }, gcCoverageTrackCfg));
+                                    });
+                                }
+
+                                return addTrackPromise;
                             });
                         });
                     },
@@ -181,6 +198,20 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                 className: 'feature'
                             }
                           }, customTrackCfg));
+                    },
+                    'data:mappability:bcm:': function (item, customTrackCfg) {
+                        var url = API_DATA_URL + item.id + '/download/',
+                            bwFile = supportedTypes.find(item, 'output.mappability.refs', supportedTypes.patterns['exprBigWig']);
+
+                        if (!bwFile) return;
+
+                        return addTrack($.extend({}, {
+                            type: 'JBrowse/View/Track/Wiggle/XYPlot',
+                            storeClass: 'JBrowse/Store/SeqFeature/BigWig',
+                            label: item.static.name + ' Coverage',
+                            urlTemplate: url + bwFile,
+                            autoscale: 'local'
+                        }, customTrackCfg));
                     }
                 };
 
