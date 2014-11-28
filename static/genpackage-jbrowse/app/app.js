@@ -30,8 +30,7 @@ angular.module('jbrowse', [
             controller: 'JBrowseController',
             resolve: { _project: resolveProject },
             reloadOnSearch: false
-        });
-        $routeProvider.otherwise({
+        }).otherwise({
             redirectTo: '/'
         });
     }])
