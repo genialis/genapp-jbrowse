@@ -55,7 +55,10 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
         };
         $scope.$watch('selectionModel.type', function (selectionType) {
             if (selectionType in filters) {
-                $scope.tableOptions.filter = filters[selectionType];
+                $scope.tableOptions.filter = {
+                    selectionType: selectionType,
+                    _fn: filters[selectionType]
+                };
             }
         });
 
@@ -84,7 +87,10 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
             showExport: false,
             showImport: false,
             selectedItems: $scope.selection,
-            filter: filters['Sequence']
+            filter: {
+                selectionType: 'Sequence',
+                _fn: filters['Sequence']
+            }
         };
 
         var config = {
