@@ -34,7 +34,6 @@ angular.module('jbrowse', [
             redirectTo: '/'
         });
     }])
-    .constant('title', 'JBrowse')
 
     .config(['StateUrlProvider', function (StateUrlProvider) {
         StateUrlProvider.localstoragePath = 'jbrowseState';
