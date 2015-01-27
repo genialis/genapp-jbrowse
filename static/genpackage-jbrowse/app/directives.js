@@ -1,8 +1,5 @@
 'use strict';
 
-// CONSTANTS
-var API_DATA_URL = '/api/v1/data/';
-
 // DIRECTIVES
 angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
     .value('version', '0.1')
@@ -69,6 +66,10 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 resolvedDefer.resolve();
                 resolvedPromise = resolvedDefer.promise;
 
+                function fileUrl(id, filename, dontEscape) {
+                    return '/data/' + id + '/' + (dontEscape ? filename : escUrl(filename));
+                }
+
                 // Before add handler for each data type.
                 beforeAdd = {
                     'data:genome:fasta:': function (config) {
@@ -87,8 +88,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 // Handlers for each data object type.
                 typeHandlers = {
                     'data:genome:fasta:': function (item, config) {
-                        var baseUrl = API_DATA_URL + item.id + '/download/seq',
-                            bwFile = supportedTypes.find(item, 'output.twobit.refs', supportedTypes.patterns['bigWig']),
+                        var bwFile = supportedTypes.find(item, 'output.twobit.refs', supportedTypes.patterns['bigWig']),
                             promise;
 
                         promise = addTrack({
@@ -96,7 +96,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             type:        'JBrowse/View/Track/Sequence',
                             storeClass:  'JBrowse/Store/Sequence/StaticChunked',
                             urlTemplate: 'seq/{refseq_dirpath}/{refseq}-',
-                            baseUrl:     baseUrl,
+                            baseUrl:     fileUrl(item.id, 'seq'),
                             category:    'Reference sequence',
                             label:       item.static.name,
                             showTranslation: false
@@ -109,7 +109,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                     type: 'JBrowse/View/Track/Wiggle/XYPlot',
                                     storeClass: 'JBrowse/Store/SeqFeature/BigWig',
                                     label: item.static.name + ' GC Window',
-                                    urlTemplate: API_DATA_URL + item.id + '/download/' + escUrl(bwFile)
+                                    urlTemplate: fileUrl(item.id, bwFile)
                                 }, config);
                             });
                         }
@@ -117,15 +117,13 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         return promise;
                     },
                     'data:alignment:bam:': function (item, config) {
-                        var url = API_DATA_URL + item.id + '/download/';
-
                         return addTrack({
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Alignments2',
                             storeClass: 'JBrowse/Store/SeqFeature/BAM',
                             category: 'NGS',
-                            urlTemplate: url + escUrl(item.output.bam.file),
-                            baiUrlTemplate: url + escUrl(item.output.bai.file),
+                            urlTemplate: fileUrl(item.id, item.output.bam.file),
+                            baiUrlTemplate: fileUrl(item.id, item.output.bai.file),
                             label: item.static.name
                         }, config).then(function () {
                             // backwards compatibility
@@ -139,31 +137,28 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         });
                     },
                     'data:reads:coverage:': function (item, config) {
-                        var url = API_DATA_URL + item.id + '/download/';
                         return addTrack({
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
                             label: item.static.name,
-                            urlTemplate: url + escUrl(item.output.bigwig.file)
+                            urlTemplate: fileUrl(item.id, item.output.bigwig.file)
                         }, config);
                     },
                     'data:expression:polya:': function (item, config) {
-                        var url = API_DATA_URL + item.id + '/download/',
-                            bigWigFile = supportedTypes.find(item, 'output.rpkumpolya.refs', supportedTypes.patterns['bigWig']);
+                        var bigWigFile = supportedTypes.find(item, 'output.rpkumpolya.refs', supportedTypes.patterns['bigWig']);
 
                         return bigWigFile && addTrack({
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
                             label: item.static.name + ' RPKUM Coverage',
-                            urlTemplate: url + escUrl(bigWigFile),
+                            urlTemplate: fileUrl(item.id, bigWigFile),
                             autoscale: 'local'
                         }, config);
                     },
                     'data:variants:vcf:': function (item, config) {
-                        var url = API_DATA_URL + item.id + '/download/',
-                            bgzipFile = supportedTypes.find(item, 'output.vcf.refs', supportedTypes.patterns['vcf']),
+                        var bgzipFile = supportedTypes.find(item, 'output.vcf.refs', supportedTypes.patterns['vcf']),
                             tabixFile = supportedTypes.find(item, 'output.vcf.refs', supportedTypes.patterns['vcfIdx']);
 
                         if (!(bgzipFile && tabixFile)) return;
@@ -173,13 +168,12 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             type: 'JBrowse/View/Track/HTMLVariants',
                             storeClass: 'JBrowse/Store/SeqFeature/VCFTabix',
                             category: 'VCF',
-                            urlTemplate: url + escUrl(bgzipFile),
-                            tbiUrlTemplate: url + escUrl(tabixFile),
+                            urlTemplate: fileUrl(item.id, bgzipFile),
+                            tbiUrlTemplate: fileUrl(item.id, tabixFile),
                             label: item.static.name
                         }, config);
                     },
                     'data:annotation:gff3:': function(item, config) {
-                        var url = API_DATA_URL + item.id + '/download/';
                         if (!_.contains(item.output.gff.refs || [], 'tracks/gff-track')) return;
 
                         return addTrack({
@@ -187,7 +181,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             type: 'CanvasFeatures',
                             storeClass: 'JBrowse/Store/SeqFeature/NCList',
                             trackType: 'CanvasFeatures',
-                            urlTemplate: url + 'tracks/gff-track/{refseq}/trackData.json',
+                            urlTemplate: fileUrl(item.id, 'tracks/gff-track/{refseq}/trackData.json', true),
                             label: item.static.name,
                             compress: 0,
                             style: {
@@ -196,7 +190,6 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         }, config);
                     },
                     'data:annotation:gtf:': function(item, config) {
-                        var url = API_DATA_URL + item.id + '/download/';
                         if (!_.contains(item.output.gtf.refs || [], 'tracks/gff-track')) return;
 
                         return addTrack({
@@ -204,7 +197,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             type: 'CanvasFeatures',
                             storeClass: 'JBrowse/Store/SeqFeature/NCList',
                             trackType: 'CanvasFeatures',
-                            urlTemplate: url + 'tracks/gff-track/{refseq}/trackData.json',
+                            urlTemplate: fileUrl(item.id, 'tracks/gff-track/{refseq}/trackData.json', true),
                             label: item.static.name,
                             compress: 0,
                             style: {
@@ -213,15 +206,14 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         }, config);
                     },
                     'data:mappability:bcm:': function (item, config) {
-                        var url = API_DATA_URL + item.id + '/download/',
-                            bwFile = supportedTypes.find(item, 'output.mappability.refs', supportedTypes.patterns['exprBigWig']);
+                        var bwFile = supportedTypes.find(item, 'output.mappability.refs', supportedTypes.patterns['exprBigWig']);
 
                         return bwFile && addTrack({
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
                             label: item.static.name + ' Coverage',
-                            urlTemplate: url + escUrl(bwFile),
+                            urlTemplate: fileUrl(item.id, bwFile),
                             autoscale: 'local'
                         }, config);
                     },
@@ -231,7 +223,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
                             label: item.static.name,
-                            urlTemplate: API_DATA_URL + item.id + '/download/' + escUrl(item.output.bigwig.file),
+                            urlTemplate: fileUrl(item.id, item.output.bigwig.file),
                             autoscale: 'local'
                         }, config);
                     }
@@ -512,8 +504,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         Browser.prototype._configDefaults = function () {
                             return {
                                 containerId: 'gen-browser',
-                                dataRoot: API_DATA_URL,
-                                baseUrl: API_DATA_URL,
+                                dataRoot: '/data/',
+                                baseUrl: '/data/',
                                 browserRoot: '/static/jbrowse-1.11.4',
                                 show_tracklist: false,
                                 show_nav: true,
