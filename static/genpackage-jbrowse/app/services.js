@@ -32,7 +32,7 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
     /**
      * Generates JBrowse container IDs.
      */
-    .factory('genBrowserId', function () {
+    .factory('genBrowserId', [function () {
         var browserCount = 0,
             genBrowserId = {};
 
@@ -43,8 +43,41 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
         };
 
         return genBrowserId;
-    })
+    }])
 
+    .factory('upperTypes', [function () {
+        /**
+         *  Splits 'data:a:b:c:#x' into ['data:a:b:c:#x', 'data:a:b:#x', 'data:a:#x', 'data:#x'].
+         *  Array also has a method getHighestIn(dict)
+         */
+        var upperTypes = function (type) {
+            if (!(_.contains(type, ':#') || _.last(type) == ':')) throw new Error("type is missing the last ':' or ':#'");
+            var typeWithoutLast = type.slice(0, type.lastIndexOf(':'));
+            var postType = type.slice(type.lastIndexOf(':'));
+
+            var splits = typeWithoutLast.split(':');
+            var ret = _.map(splits, function (s, ix) {
+                return _.initial(splits, ix).join(':') + postType;
+            });
+            ret.getHighestIn = function (dict) {
+                return _.find(ret, function (upType) {
+                    return upType in dict;
+                });
+            };
+            return ret;
+        };
+        upperTypes.test = function () {
+            if (!_.isEqual(upperTypes('data:a:b:c:#x'), ['data:a:b:c:#x', 'data:a:b:#x', 'data:a:#x', 'data:#x'])) throw new Error('upperTypes test failed');
+            if (!_.isEqual(upperTypes('data:a:b:c:'), ['data:a:b:c:', 'data:a:b:', 'data:a:', 'data:'])) throw new Error('upperTypes test failed');
+            var dict = {
+                'data:a:c:': 2,
+                'data:a:#x': 4
+            };
+            if (upperTypes('data:a:b:c:#x').getHighestIn(dict) != 'data:a:#x') throw new Error('upperTypes.getHighestIn test failed');
+            if (upperTypes('data:e:b:c:').getHighestIn(dict)) throw new Error('upperTypes.getHighestIn test failed');
+        };
+        return upperTypes;
+    }])
     /**
      * Data types supported by Genesis JBrowse implementation.
      *
@@ -89,7 +122,7 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
      *          ............
      *      }
      */
-    .factory('supportedTypes', function() {
+    .factory('supportedTypes', ['upperTypes', function (upperTypes) {
         var commonPatterns,
             canShowPatterns,
             organization,
@@ -176,10 +209,14 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
             };
 
             if (item.status !== 'done') return false;
-            if (!(item.type in canShowPatterns)) return false;
-            if (selectionMode && !(item.type in organization[selectionMode])) return false;
+            var upTypes = upperTypes(item.type);
+            var showableUpperType = upTypes.getHighestIn(canShowPatterns);
+            if (!showableUpperType) return false;
 
-            return compute(canShowPatterns[item.type]);
+            var orgUpperType = upTypes.getHighestIn(organization[selectionMode]);
+            if (selectionMode && !orgUpperType) return false;
+
+            return compute(canShowPatterns[showableUpperType]);
         };
 
         api.find = function (item, propPath, pattern) {
@@ -191,5 +228,5 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
         api.patterns = commonPatterns;
 
         return api;
-    })
+    }])
 ;
