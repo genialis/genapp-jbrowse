@@ -42,7 +42,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
             },
             replace: true,
             templateUrl: '/static/genpackage-jbrowse/partials/directives/genbrowser.html',
-            controller: ['$scope', '$q', '$timeout', '$filter', '$injector', 'TestFile', 'notify', 'genBrowserId', 'supportedTypes', function ($scope, $q, $timeout, $filter, $injector, TestFile, notify, genBrowserId, supportedTypes) {
+            controller: ['$scope', '$q', '$timeout', '$filter', '$injector', 'TestFile', 'notify', 'genBrowserId', 'supportedTypes', 'upperTypes', function ($scope, $q, $timeout, $filter, $injector, TestFile, notify, genBrowserId, supportedTypes, upperTypes) {
                 var escUrl,
                     defaultConfig,
                     resolvedDefer,
@@ -105,7 +105,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         if (bwFile) {
                             return promise.then(function () {
                                return addTrack({
-                                    genialisType: item.type + 'gc:',
+                                    genialisType: item.type + '#gc',
                                     type: 'JBrowse/View/Track/Wiggle/XYPlot',
                                     storeClass: 'JBrowse/Store/SeqFeature/BigWig',
                                     label: item.static.name + ' GC Window',
@@ -333,9 +333,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         deferred;
 
                     if (!trackCfg.genialisType) throw new Error('Track is missing genialisType');
-                    if (config && config[trackCfg.genialisType]) {
-                        $.extend(trackCfg, config[trackCfg.genialisType]);
-                    }
+                    var cfgUpperType = config && upperTypes(trackCfg.genialisType).getHighestIn(config);
+                    if (cfgUpperType) $.extend(trackCfg, config[cfgUpperType]);
 
                     if (trackCfg.dontAdd) return resolvedPromise;
                     if (alreadyExists) {
@@ -407,11 +406,10 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                 // Publicly exposed API.
                 /**
-                 *  config can contain the following keys: {
+                 *  config can contain the following keys, or any upperTypes(key): {
                  *      'data:genome:fasta:': {},
-                 *      'data:genome:fasta:gc': {},
+                 *      'data:genome:fasta:#gc': {},
                  *      'data:alignment:bam:': {},
-                 *      'data:alignment:bam:bigwig': {},
                  *      'data:expression:polya:': {},
                  *      'data:variants:vcf:': {},
                  *      'data:annotation:gff3:': {},
@@ -427,8 +425,9 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 $scope.options.addTrack = function (item, config) {
                     var maybePromise;
 
-                    if (!(item.type in typeHandlers)) throw new Error('No handler for data type ' + item.type + ' defined.');
-                    maybePromise = typeHandlers[item.type](item, config);
+                    var handlableUpperType = upperTypes(item.type).getHighestIn(typeHandlers);
+                    if (!handlableUpperType) throw new Error('No handler for data type ' + item.type + ' defined.');
+                    maybePromise = typeHandlers[handlableUpperType](item, config);
                     // definitely promise
                     return resolvedPromise.then(function () {
                         return maybePromise;
