@@ -146,7 +146,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         }, config);
                     },
                     'data:expression:polya:': function (item, config) {
-                        var bigWigFile = supportedTypes.find(item, 'output.rpkumpolya.refs', supportedTypes.patterns['bigWig']);
+                        var bigWigFile = supportedTypes.find(item, 'output.exp.refs', supportedTypes.patterns['bigWig']);
 
                         return bigWigFile && addTrack({
                             genialisType: item.type,
