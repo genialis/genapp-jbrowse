@@ -107,7 +107,7 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
      *      If we want to check whether at least one field suffices our condition, we can simply make a disjunction:
 
      *      'data:expression:polya:': {
-     *          'output.rpkumpolya.refs': /\.bw/,
+     *          'output.exp.refs': /\.bw/,
      *          'output.rpkmpolya.refs': /\.bw/,
      *          ............
      *      }
@@ -117,7 +117,7 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
      *      both ".tab" file and ".bw" file.
      *
      *      'data:expression:polya:': {
-     *          'output.rpkumpolya.refs': [/\.tab/, /\.bw/],
+     *          'output.exp.refs': [/\.tab/, /\.bw/],
      *          'output.rpkmpolya.refs': [/\.tab/, /\.bw/],
      *          ............
      *      }
@@ -165,12 +165,12 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
                 }
             ],
             'data:expression:polya:': {
+                'output.rc_raw.refs': commonPatterns['exprBigWig'],
                 'output.rc.refs': commonPatterns['exprBigWig'],
-                'output.rcpolya.refs': commonPatterns['exprBigWig'],
                 'output.rpkm.refs': commonPatterns['exprBigWig'],
                 'output.rpkmpolya.refs': commonPatterns['exprBigWig'],
                 'output.rpkum.refs': commonPatterns['exprBigWig'],
-                'output.rpkumpolya.refs': commonPatterns['exprBigWig']
+                'output.exp.refs': commonPatterns['exprBigWig']
             },
             'data:variants:vcf:': {
                 'output.vcf.refs': [commonPatterns['vcf'], commonPatterns['vcfIdx']]
