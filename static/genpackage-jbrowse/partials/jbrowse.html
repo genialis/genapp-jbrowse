@@ -2,16 +2,13 @@
     <div class="row">
         <div class="col-md-12">
             <div class="btn-group" data-toggle="buttons">
-                <label tooltip-placement="right" tooltip="Selecting a new sequence track when one already present
-                    will also delete other tracks in your current view."
-                    tooltip-trigger="{{ selectionModel.restrictedMode ? 'false' : 'mouseenter'}}">
+                <label tooltip-placement="right" tooltip="{{ selectionModel.restrictedMode ? '' : 'Selecting a new sequence track when one is already present will also delete other tracks in your current view.' }}">
                     <button class="btn btn-default" ng-click="collapse('Sequence')"
                             ng-class="{ 'active': selectionModel.type == 'Sequence' && isCollapsed == false }">
                         Sequence
                     </button>
                 </label>
-                <label tooltip-placement="top" tooltip="First, add a sequence track."
-                    tooltip-trigger="{{ selectionModel.restrictedMode ? 'mouseenter' : 'false'}}">
+                <label tooltip-placement="top" tooltip="{{ selectionModel.restrictedMode ? 'First, add a sequence track.' : '' }}">
                     <button class="btn btn-default" ng-class="{ 'active': selectionModel.type == 'Other' && isCollapsed == false }"
                             ng-click="collapse('Other')" ng-disabled="selectionModel.restrictedMode">
                         Alignment data
