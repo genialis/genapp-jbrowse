@@ -49,12 +49,11 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     resolvedPromise,
                     typeHandlers,
                     beforeAdd,
-                    addTrack,
+                    addTrackInner,
                     purgeRefSeqs,
                     reloadRefSeqs,
                     preConnect,
                     connector,
-                    getTrackByLabel,
                     loadStateConfigs;
 
                 escUrl = $filter('escape');
@@ -84,6 +83,9 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         return reloadDeferred.promise;
                     }
                 };
+                beforeAdd = _.merge(beforeAdd, {
+                    'data:jbrowse:refseq:genome:': beforeAdd['data:genome:fasta:']
+                });
 
                 // Handlers for each data object type.
                 typeHandlers = {
@@ -91,7 +93,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         var bwFile = supportedTypes.find(item, 'output.twobit.refs', supportedTypes.patterns['bigWig']),
                             promise;
 
-                        promise = addTrack({
+                        promise = addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type:        'JBrowse/View/Track/Sequence',
                             storeClass:  'JBrowse/Store/Sequence/StaticChunked',
@@ -104,7 +107,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                         if (bwFile) {
                             return promise.then(function () {
-                               return addTrack({
+                               return addTrackInner({
+                                    genialisId: item.id + '#gc',
                                     genialisType: item.type + '#gc',
                                     type: 'JBrowse/View/Track/Wiggle/XYPlot',
                                     storeClass: 'JBrowse/Store/SeqFeature/BigWig',
@@ -116,8 +120,12 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                         return promise;
                     },
+                    'data:jbrowse:refseq:genome:': function (item, config) {
+                        return typeHandlers['data:genome:fasta:'](item, config);
+                    },
                     'data:alignment:bam:': function (item, config) {
-                        return addTrack({
+                        return addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Alignments2',
                             storeClass: 'JBrowse/Store/SeqFeature/BAM',
@@ -128,16 +136,18 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         }, config).then(function () {
                             // backwards compatibility
                             var bigWigFile = supportedTypes.find(item, 'output.bam.refs', supportedTypes.patterns['bigWig']);
-                            return bigWigFile && $scope.options.addTrack({
-                                id: item.id,
-                                type: 'data:reads:coverage:',
-                                static: { name: item.static.name + ' Coverage' },
-                                output: { bigwig: { file: bigWigFile } }
-                            }, config);
+                            if (!bigWigFile) return false;
+
+                            var bwItem = angular.copy(item);
+                            bwItem.id = bwItem.id + ' Coverage';
+                            bwItem.static.name = bwItem.static.name + ' Coverage';
+                            bwItem.output.bigwig.file = bigWigFile;
+                            return typeHandlers['data:reads:coverage:'](bwItem, config);
                         });
                     },
                     'data:reads:coverage:': function (item, config) {
-                        return addTrack({
+                        return addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
@@ -145,10 +155,16 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             urlTemplate: fileUrl(item.id, item.output.bigwig.file)
                         }, config);
                     },
+                    'data:jbrowse:bigwig:': function (item, config) {
+                        var coverageItem = angular.copy(item);
+                        coverageItem.output.bigwig = coverageItem.output.bigwig_track;
+                        return typeHandlers['data:reads:coverage:'](coverageItem, config);
+                    },
                     'data:expression:polya:': function (item, config) {
                         var bigWigFile = supportedTypes.find(item, 'output.exp.refs', supportedTypes.patterns['bigWig']);
 
-                        return bigWigFile && addTrack({
+                        return bigWigFile && addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
@@ -163,7 +179,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                         if (!(bgzipFile && tabixFile)) return;
 
-                        return addTrack({
+                        return addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/HTMLVariants',
                             storeClass: 'JBrowse/Store/SeqFeature/VCFTabix',
@@ -173,15 +190,19 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             label: item.static.name
                         }, config);
                     },
-                    'data:annotation:gff3:': function(item, config) {
-                        if (!_.contains(item.output.gff.refs || [], 'tracks/gff-track')) return;
+                    'data:annotation:gff3:': function (item, config) {
+                        var annotationFiles = false;
+                        if (_.contains(item.output.gff.refs || [], 'tracks/gff-track')) annotationFiles = 'tracks/gff-track/{refseq}/trackData.json';
+                        if (_.contains(item.output.gff.refs || [], 'tracks/annotation')) annotationFiles = 'tracks/annotation/{refseq}/trackData.json';
+                        if (!annotationFiles) return;
 
-                        return addTrack({
+                        return addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'CanvasFeatures',
                             storeClass: 'JBrowse/Store/SeqFeature/NCList',
                             trackType: 'CanvasFeatures',
-                            urlTemplate: fileUrl(item.id, 'tracks/gff-track/{refseq}/trackData.json', true),
+                            urlTemplate: fileUrl(item.id, annotationFiles, true),
                             label: item.static.name,
                             compress: 0,
                             style: {
@@ -189,26 +210,21 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             }
                         }, config);
                     },
-                    'data:annotation:gtf:': function(item, config) {
-                        if (!_.contains(item.output.gtf.refs || [], 'tracks/gff-track')) return;
-
-                        return addTrack({
-                            genialisType: item.type,
-                            type: 'CanvasFeatures',
-                            storeClass: 'JBrowse/Store/SeqFeature/NCList',
-                            trackType: 'CanvasFeatures',
-                            urlTemplate: fileUrl(item.id, 'tracks/gff-track/{refseq}/trackData.json', true),
-                            label: item.static.name,
-                            compress: 0,
-                            style: {
-                                className: 'feature'
-                            }
-                        }, config);
+                    'data:annotation:gtf:': function (item, config) {
+                        var gffItem = angular.copy(item);
+                        gffItem.output.gff = gffItem.output.gtf;
+                        return typeHandlers['data:annotation:gff3:'](gffItem, config);
+                    },
+                    'data:jbrowse:annotation:': function (item, config) {
+                        var gffItem = angular.copy(item);
+                        gffItem.output.gff = gffItem.output.annotation_track;
+                        return typeHandlers['data:annotation:gff3:'](gffItem, config);
                     },
                     'data:mappability:bcm:': function (item, config) {
                         var bwFile = supportedTypes.find(item, 'output.mappability.refs', supportedTypes.patterns['exprBigWig']);
 
-                        return bwFile && addTrack({
+                        return bwFile && addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
@@ -218,7 +234,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         }, config);
                     },
                     'data:bigwig:mappability:': function (item, config) {
-                        return addTrack({
+                        return addTrackInner({
+                            genialisId: item.id,
                             genialisType: item.type,
                             type: 'JBrowse/View/Track/Wiggle/XYPlot',
                             storeClass: 'JBrowse/Store/SeqFeature/BigWig',
@@ -237,14 +254,14 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     $scope.tracks = StateUrl($scope, ['tracks']).tracks || [];
                     _.each($scope.tracks, function(cfg) {
                         var d = $q.defer();
-                        if (typeof lastPromise === 'undefined') {
+                        if (_.isUndefined(lastPromise)) {
                             lastPromise = d.promise;
-                            addTrack(cfg).then(function () {
+                            addTrackInner(cfg).then(function () {
                                 d.resolve();
                             });
                         } else {
                             lastPromise.then(function () {
-                                addTrack(cfg).then(function () {
+                                addTrackInner(cfg).then(function () {
                                     d.resolve();
                                 });
                             });
@@ -254,9 +271,12 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 };
 
                 // Gets JBrowse track. Searches by label.
-                getTrackByLabel = function (lbl) {
-                    return _.findWhere($scope.browser.config.tracks || [], {label: lbl});
-                };
+                function getTrackByLabel(lbl) {
+                    return _.find($scope.browser.config.tracks, {label: lbl});
+                }
+                function getTrackById(lbl) {
+                    return _.find($scope.browser.config.tracks, {genialisId: lbl});
+                }
 
                 // Purges reference sequence store.
                 purgeRefSeqs = function (label) {
@@ -327,22 +347,29 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 };
 
                 // Adds track to JBrowse.
-                addTrack = function (trackCfg, config) {
-                    var isSequenceTrack = trackCfg.type == 'JBrowse/View/Track/Sequence',
-                        alreadyExists = getTrackByLabel(trackCfg.label) !== undefined,
-                        deferred;
+                addTrackInner = function (trackCfg, config) {
+                    var isSequenceTrack = trackCfg.type == 'JBrowse/View/Track/Sequence';
 
                     if (!trackCfg.genialisType) throw new Error('Track is missing genialisType');
                     var cfgUpperType = config && upperTypes(trackCfg.genialisType).getHighestIn(config);
                     if (cfgUpperType) $.extend(trackCfg, config[cfgUpperType]);
 
                     if (trackCfg.dontAdd) return resolvedPromise;
+
+                    var alreadyExists = trackCfg.genialisId && getTrackById(trackCfg.genialisId);
                     if (alreadyExists) {
                         notify({message: "Track " + trackCfg.label + " is already present in the viewport.", type: "danger"});
                         return resolvedPromise;
                     }
 
-                    deferred = $q.defer();
+                    // must have unique label because jBrowse.showTracks uses labels as ids
+                    if (getTrackByLabel(trackCfg.label)) {
+                        var i = 1;
+                        while (getTrackByLabel(trackCfg.label + ' ('+i+')') || i > 10000) i++;
+                        trackCfg.label += ' ('+i+')';
+                    }
+
+                    var deferred = $q.defer();
                     if (trackCfg.urlTemplate && !_.contains(trackCfg.urlTemplate, '{')) { //skip if it contains {refseq} or {refseq_dirpath}
                         TestFile(trackCfg.urlTemplate, function () {
                             deferred.resolve(true);
@@ -385,9 +412,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                 }
 
                                 $scope.browser.showTracks([trackCfg.label]);
-                                if (typeof _.findWhere($scope.tracks, {label: trackCfg.label}) == 'undefined') {
-                                    $scope.tracks.push(trackCfg);
-                                }
+                                if (!_.find($scope.tracks, {label: trackCfg.label})) $scope.tracks.push(trackCfg);
 
                                 if (trackCfg.genialisType in ($scope.options.afterAdd || {})) {
                                     $scope.options.afterAdd[trackCfg.genialisType].call($scope.browser);
@@ -415,7 +440,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                  *      'data:annotation:gff3:': {},
                  *      'data:annotation:gtf:': {},
                  *      'data:mappability:bcm:': {},
-                 *      'data:bigwig:mappability:': {}
+                 *      'data:bigwig:mappability:': {},
+                 *      ...
                  *  }
                  *  Tracks are assigned genialisType = item's type + subtype.
                  *  Track configuration is extended with config[genialisType].
@@ -435,21 +461,18 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 };
 
                 $scope.options.removeTracks = function (tracks) {
-                    var trackCfgs = [],
-                        t;
-                    if (_.isString(tracks)) {
-                        this.removeTracks([tracks]);
-                        return;
-                    } else if (_.isArray(tracks)) {
-                        _.each(tracks, function (trackCfg) {
-                            if (_.isString(trackCfg)) {
-                                t = getTrackByLabel(trackCfg);
-                                if (typeof t !== 'undefined') trackCfgs.push(t);
-                            } else if (_.isObject(trackCfg)) {
-                                trackCfgs.push(trackCfg);
-                            }
-                        });
-                    }
+                    if (!tracks) return;
+                    if (_.isString(tracks)) return this.removeTracks([tracks]);
+
+                    var trackCfgs = [];
+                    _.each(tracks, function (trackCfg) {
+                        if (_.isString(trackCfg)) {
+                            var t = getTrackById(trackCfg);
+                            if (!_.isUndefined(t)) trackCfgs.push(t);
+                        } else if (_.isObject(trackCfg)) {
+                            trackCfgs.push(trackCfg);
+                        }
+                    });
                     $scope.browser.publish('/jbrowse/v1/v/tracks/delete', trackCfgs);
                 };
 

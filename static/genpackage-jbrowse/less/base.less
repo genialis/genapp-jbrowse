@@ -9,6 +9,57 @@
     * {
       box-sizing: initial;
     }
+
+
+    .gen-style-jbrowse & {
+        background-color: #fff;
+        .track-label {
+            margin-left: 0px;
+
+            .fade;
+            opacity: 0.7;
+            &:hover {
+                opacity: 1;
+            }
+
+            .track-label-text {
+                // display: none;
+            }
+        }
+        .feature-description {
+            .text-info;
+        }
+        .base {
+            color: white;
+            text-shadow: none;
+        }
+        .base_n { .label-default; }
+        .base_t { .label-danger; }
+        .base_a { .label-success; }
+        .base_g { .label-warning; }
+        .base_c { .label-primary; }
+
+        .overview {
+            border-color: @panel-default-border;
+            .track {
+                background: @panel-default-heading-bg;
+            }
+        }
+        .track.static_track {
+            border-color: @panel-default-border !important;
+            background: @panel-default-heading-bg !important;
+        }
+
+
+        div.sequence_blur {
+            background: rgba(245, 245, 245, 0.6);
+        }
+        div.message {
+            background: rgba(245, 245, 245, 0.6);
+            border: none;
+            font-size: 12px;
+        }
+    }
 }
 .padding-fix {
     padding-top: 5px;

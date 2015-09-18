@@ -123,46 +123,44 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
      *      }
      */
     .factory('supportedTypes', ['upperTypes', function (upperTypes) {
-        var commonPatterns,
-            canShowPatterns,
-            organization,
-            api = {};
-
         // Organization of data selector tabs.
-        organization = {
+        var organization = {
             'Sequence': {
-                'data:genome:fasta:': true
+                'data:genome:fasta:': true,
+                'data:jbrowse:refseq:genome:': true
             },
             'Other': {
                 'data:alignment:bam:': true,
                 'data:expression:polya:': true,
                 'data:variants:vcf:': true,
                 'data:annotation:gff3:': true,
+                'data:annotation:gtf:': true,
+                'data:jbrowse:annotation:': true, // data:jbrowse:annotation:gtf: data:jbrowse:annotation:gff3:
+                'data:reads:coverage:': true,
+                'data:jbrowse:bigwig:': true, // data:jbrowse:bigwig:coverage:
                 'data:mappability:bcm:': true,
-                'data:bigwig:mappability:': true,
-                'data:annotation:gtf:': true
+                'data:bigwig:mappability:': true
             }
         };
 
-        commonPatterns = {
+        var commonPatterns = {
             bigWig: /\.bw$/i,
             exprBigWig: /\.tab\.bw$/i,
             vcf: /\.vcf\.bgz$/i,
             vcfIdx: /\.vcf\.bgz\.tbi$/i,
-            gff: /^tracks\/gff-track$/
+            gff: /^tracks\/(gff-track|annotation)$/i,
         };
 
-        canShowPatterns = {
+        var canShowPatterns = {
             'data:genome:fasta:': {
                 'output.fasta.refs': [/^seq$/, /^seq\/refSeqs\.json$/]
             },
+            'data:jbrowse:refseq:genome:': {
+                'output.refseq_track.refs': /^seq$/
+            },
             'data:alignment:bam:': [
-                {
-                    'output.bam.file': /\.bam$/i
-                },
-                {
-                    'output.bai.file': /\.bai$/i
-                }
+                { 'output.bam.file': /\.bam$/i },
+                { 'output.bai.file': /\.bai$/i }
             ],
             'data:expression:polya:': {
                 'output.rc_raw.refs': commonPatterns['exprBigWig'],
@@ -181,6 +179,15 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
             'data:annotation:gtf:': {
                 'output.gtf.refs': commonPatterns['gff']
             },
+            'data:jbrowse:annotation:': { // data:jbrowse:annotation:gtf: data:jbrowse:annotation:gff3:
+                'output.annotation_track.refs': commonPatterns['gff']
+            },
+            'data:reads:coverage:': {
+                'output.bigwig.file': commonPatterns['bigWig']
+            },
+            'data:jbrowse:bigwig:': { // data:jbrowse:bigwig:coverage:
+                'output.bigwig_track.file': commonPatterns['bigWig']
+            },
             'data:mappability:bcm:': {
                 'output.mappability.refs': commonPatterns['exprBigWig']
             },
@@ -189,44 +196,118 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
             }
         };
 
-        // Tells whether given item can be shown in data selector (in given selection mode, e.g. 'Sequence' or 'Other')
-        api.canShow = function(item, selectionMode) {
-            var compute;
+        return {
+            canShow: function (item, selectionMode) {
+                // Tells whether given item can be shown in data selector (in given selection mode, e.g. 'Sequence' or 'Other')
+                if (item.status !== 'done') return false;
+                var upTypes = upperTypes(item.type);
+                var showableUpperType = upTypes.getHighestIn(canShowPatterns);
+                if (!showableUpperType) return false;
 
-            compute = function (conditions, fieldName) {
-                var entries;
-                if (_.isRegExp(conditions)) {
-                    entries = _.path(item, fieldName);
-                    if (!_.isArray(entries)) entries = [entries];
-                    return _.some(entries, _.bind(conditions.test, conditions));
-                } else if (_.isArray(conditions)) {
-                    return _.every(conditions, function (arrItem) {
-                        return compute(arrItem, fieldName);
-                    });
-                } else if (_.isObject(conditions)) {
-                    return _.some(conditions, compute);
+                var orgUpperType = upTypes.getHighestIn(organization[selectionMode]);
+                if (selectionMode && !orgUpperType) return false;
+
+                function calcCanShowRecursive(conditions, fieldName) {
+                    if (_.isRegExp(conditions)) {
+                        var entries = _.path(item, fieldName);
+                        if (!_.isArray(entries)) entries = [entries];
+                        return _.any(entries, _.bind(conditions.test, conditions));
+                    }
+                    if (_.isArray(conditions)) {
+                        return _.all(conditions, function (arrItem) {
+                            return calcCanShowRecursive(arrItem, fieldName);
+                        });
+                    }
+                    if (_.isObject(conditions)) {
+                        return _.any(conditions, function (objItem, objFieldName) {
+                            return calcCanShowRecursive(objItem, objFieldName);
+                        });
+                    }
+                }
+                return calcCanShowRecursive(canShowPatterns[showableUpperType], null);
+            },
+            find: function (item, propPath, pattern) {
+                var entries = _.path(item, propPath);
+                if (!_.isArray(entries)) entries = [entries];
+                return _.find(entries, _.bind(pattern.test, pattern)) || false;
+            },
+            patterns: commonPatterns
+        };
+    }])
+
+    .factory('genJbrowseTracksConfig', [function () {
+        var bootstrapPool = {
+            primary: '#428bca',
+            success: '#5cb85c',
+            info: '#5bc0de',
+            warning: '#f0ad4e',
+            danger: '#d9534f'
+        };
+
+        return function () {
+            var ret = {
+                'data:genome:fasta:': {
+                    label: 'Genome',
+                },
+                'data:genome:fasta:#gc': {
+                    label: 'GC',
+                    style: {
+                        height: 60,
+                        pos_color: bootstrapPool.primary
+                    }
+                },
+                'data:variants:vcf:': {
+                    label: 'Variants',
+                    maxFeatureScreenDensity: 1,
+                    maxHeight: 300,
+                    style: {
+                        featureCss: 'background-color: ' + bootstrapPool.warning
+                    }
+                },
+                'data:reads:coverage:': {
+                    label: 'Coverage',
+                    autoscale: 'local',
+                    min_score: 0,
+                    type: 'Genialis/View/Track/Wiggle/XYPlot',
+                    bicolor_pivot: 0,
+                    style: {
+                        pos_color: bootstrapPool.success,
+                        neg_color: bootstrapPool.warning,
+                        origin_color: bootstrapPool.warning
+                    }
+                },
+                'data:annotation:gtf:': {
+                    label: 'Features',
+                    maxHeight: 1000,
+                    histograms: {
+                        storeClass: 'JBrowse/Store/SeqFeature/BigWig',
+                        color: bootstrapPool.warning
+                    },
+                    style: {
+                        color: bootstrapPool.warning
+                    }
+                },
+                'data:annotation:gff3:': {
+                    histograms: {
+                        storeClass: 'JBrowse/Store/SeqFeature/BigWig',
+                        color: bootstrapPool.warning
+                    },
+                    style: {
+                        color: bootstrapPool.warning
+                    }
+                },
+                'data:bigwig:mappability:': {
+                    label: 'Mappability',
+                    style: {
+                        pos_color: bootstrapPool.success
+                    }
                 }
             };
-
-            if (item.status !== 'done') return false;
-            var upTypes = upperTypes(item.type);
-            var showableUpperType = upTypes.getHighestIn(canShowPatterns);
-            if (!showableUpperType) return false;
-
-            var orgUpperType = upTypes.getHighestIn(organization[selectionMode]);
-            if (selectionMode && !orgUpperType) return false;
-
-            return compute(canShowPatterns[showableUpperType]);
+            return _.merge(ret, {
+                'data:jbrowse:refseq:genome:': ret['data:genome:fasta:'],
+                'data:jbrowse:bigwig:': ret['data:reads:coverage:'],
+                'data:jbrowse:annotation:': ret['data:annotation:gff3:']
+            });
         };
-
-        api.find = function (item, propPath, pattern) {
-            var entries = _.path(item, propPath);
-            if (!_.isArray(entries)) entries = [entries];
-            return _.find(entries, _.bind(pattern.test, pattern)) || false;
-        };
-
-        api.patterns = commonPatterns;
-
-        return api;
     }])
 ;

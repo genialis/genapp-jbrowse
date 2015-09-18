@@ -1,48 +1,47 @@
 <div class="container jbrowse">
     <div class="row">
-        <div class="col-md-12">
-            <div class="btn-group" data-toggle="buttons">
-                <label tooltip-placement="right" tooltip="{{ selectionModel.restrictedMode ? '' : 'Selecting a new sequence track when one is already present will also delete other tracks in your current view.' }}">
-                    <button class="btn btn-default" ng-click="collapse('Sequence')"
-                            ng-class="{ 'active': selectionModel.type == 'Sequence' && isCollapsed == false }">
-                        Sequence
-                    </button>
-                </label>
-                <label tooltip-placement="top" tooltip="{{ selectionModel.restrictedMode ? 'First, add a sequence track.' : '' }}">
-                    <button class="btn btn-default" ng-class="{ 'active': selectionModel.type == 'Other' && isCollapsed == false }"
-                            ng-click="collapse('Other')" ng-disabled="selectionModel.restrictedMode">
-                        Alignment data
-                    </button>
-                </label>
-                <button ng-if="$root.dev" class="btn-dev" ng-click="clearState()">Clear state</button>
-            </div>
+        <div class="col-md-6">
+            <label tooltip-placement="right" tooltip="{{ selectionModel.restrictedMode ? '' : 'Selecting a new sequence track when one is already present will also delete other tracks in your current view.' }}">
+                <button class="btn btn-default" ng-click="collapse('Sequence')"
+                        ng-class="{ 'active': selectionModel.type == 'Sequence' && isCollapsed == false }">
+                    Sequence
+                </button>
+            </label>
+            <label tooltip-placement="top" tooltip="{{ selectionModel.restrictedMode ? 'First, add a sequence track.' : '' }}">
+                <button class="btn btn-default" ng-class="{ 'active': selectionModel.type == 'Other' && isCollapsed == false }"
+                        ng-click="collapse('Other')" ng-disabled="selectionModel.restrictedMode">
+                    Alignment data
+                </button>
+            </label>
 
-            <div collapse="isCollapsed">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="cases">
-                            <div class="case-list">
-                                <div class="case-filter input-group">
-                                    <span class="input-group-addon">Filter project: </span>
-                                    <input id="project-filter" type="text" class="form-control" ng-model="project_filter.$" placeholder="keywords">
-                                </div>
-                                <ul class="list-group">
-                                    <li class="list-group-item case" ng-repeat="project in projects | filter:project_filter">
-                                        <div class="title"><a href ng-click="selectProject(project);">{{project.name}} <span class="glyphicon glyphicon-chevron-right"></span></a></div>
-                                        <div class="description">{{project.description}}</div>
-                                        <a target="_blank" ng-href="/genboard/#/{{project.url_slug}}/" class="view-gencloud" tooltip="Opens in new tab" tooltip-placement="right">View in GenBoard</a>
-                                    </li>
-                                </ul>
-                            </div>
+            <button class="btn btn-default pull-right" ng-click="clearState()">Reset application</button>
+        </div>
+    </div>
+
+    <div collapse="isCollapsed">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="cases">
+                    <div class="case-list">
+                        <div class="case-filter input-group">
+                            <span class="input-group-addon">Filter project: </span>
+                            <input id="project-filter" type="text" class="form-control" ng-model="project_filter.$" placeholder="keywords">
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <gen-table gen-options="tableOptions"></gen-table>
+                        <ul class="list-group">
+                            <li class="list-group-item case" ng-repeat="project in projects | filter:project_filter">
+                                <div class="title"><a href ng-click="selectProject(project);">{{project.name}} <span class="glyphicon glyphicon-chevron-right"></span></a></div>
+                                <div class="description">{{project.description}}</div>
+                                <a target="_blank" ng-href="/genboard/#/{{project.url_slug}}/" class="view-gencloud" tooltip="Opens in new tab" tooltip-placement="right">View in GenBoard</a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
+            </div>
+            <div class="col-md-6">
+                <gen-table gen-options="tableOptions"></gen-table>
             </div>
         </div>
     </div>
 
-    <gen-browser options="jbrowseOptions"></gen-browser>
+    <gen-browser options="jbrowseOptions" class="gen-style-jbrowse"></gen-browser>
 </div>

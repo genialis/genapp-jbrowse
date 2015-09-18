@@ -17,7 +17,7 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
      *
      *     Controlls JBrowse genome browser.
      */
-    .controller('JBrowseController', ['_projects', '$scope', '$location', 'supportedTypes', function (_projects, $scope, $location, supportedTypes) {
+    .controller('JBrowseController', ['_projects', '$scope', '$location', 'supportedTypes', 'captureScroll', 'genJbrowseTracksConfig', function (_projects, $scope, $location, supportedTypes, captureScroll, genJbrowseTracksConfig) {
         $scope.projects = _projects;
 
         // Project onclick handler.
@@ -74,12 +74,7 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
             }
         };
 
-        var config = {
-            'data:reads:coverage:': {
-                min_score: 0,
-                max_score: 35
-            }
-        };
+        var config = _.merge(genJbrowseTracksConfig(), {});
 
         $scope.jbrowseOptions = {
             onConnect: function () {
@@ -98,11 +93,22 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
             },
             keepState: true
         };
+        $scope.jbrowseOptions = _.merge($scope.jbrowseOptions, {
+            afterAdd: {
+                'data:jbrowse:refseq:genome:': $scope.jbrowseOptions.afterAdd['data:genome:fasta:']
+            }
+        });
+
 
         $scope.clearState = function () {
+            if (!confirm('Are you sure you want to reset jBrowse application?')) return;
             delete localStorage.jbrowseState;
             $location.search({});
             setTimeout(function () { location.reload(); }, 0);
         };
+
+        captureScroll.liveCapture([
+            '.dijitDialog .dijitDialogPaneContent' //works perfectly until scrolled without mouse over dialog
+        ]);
     }])
 ;
