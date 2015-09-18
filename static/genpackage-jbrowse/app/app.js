@@ -21,14 +21,14 @@ angular.module('jbrowse', [
 
     .config(['$routeProvider', function ($routeProvider) {
 
-       var resolveProject = ['resolveProject', function (resolveProject) {
-           return resolveProject();
+       var resolveProjects = ['resolveProjects', function (resolveProjects) {
+           return resolveProjects();
        }];
 
         $routeProvider.when('/', {
             templateUrl: '/static/genpackage-jbrowse/partials/jbrowse.html',
             controller: 'JBrowseController',
-            resolve: { _project: resolveProject },
+            resolve: { _projects: resolveProjects },
             reloadOnSearch: false
         }).otherwise({
             redirectTo: '/'

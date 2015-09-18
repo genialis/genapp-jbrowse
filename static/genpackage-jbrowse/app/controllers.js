@@ -8,40 +8,26 @@
 angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
 
     /**
-     * .. js:function:: JBrowseController(Project, _project, $scope, $route)
+     * .. js:function:: JBrowseController(_projects, $scope)
      *
      *      **URL**: ``/``
      *
-     *      :param Project: :class:`Case <server.models.Case>` resource
-     *      :param _project: a deferred promise resolved before initialization for the initial case
+     *      :param _projects: a deferred promise resolved before initialization for the initial case
      *      :param $scope: Angular's scope service
-     *      :param $route: Angular's route service
      *
      *     Controlls JBrowse genome browser.
      */
-    .controller('JBrowseController', ['Project', '_project', '$scope', '$route', 'supportedTypes', function (Project, _project, $scope, $route, supportedTypes) {
-        var filters;
-
-        // Fetch projects.
-        Project.get({}, function (data) {
-            $scope.projectsData = data;
-        });
+    .controller('JBrowseController', ['_projects', '$scope', '$location', 'supportedTypes', function (_projects, $scope, $location, supportedTypes) {
+        $scope.projects = _projects;
 
         // Project onclick handler.
-        $scope.selectProject = function (caseId) {
-            var project = _.find($scope.projectsData.objects || [], function (p) {
-                return p.id == caseId;
-            });
-
-            if (typeof project !== 'undefined') {
-                $route.current.params.caseId = project.id;
-                $scope.project = project;
-                $scope.tableOptions.project = project;
-            }
+        $scope.selectProject = function (project) {
+            $scope.tableOptions.project = project;
+            selectTypeFilter();
         };
 
         // Data table pre-filters
-        filters = {
+        var filters = {
             'Sequence': function (obj) {
                 return supportedTypes.canShow(obj, 'Sequence');
             },
@@ -53,34 +39,29 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
             type: 'Sequence',
             restrictedMode: true
         };
-        $scope.$watch('selectionModel.type', function (selectionType) {
-            if (selectionType in filters) {
-                $scope.tableOptions.filter = {
-                    selectionType: selectionType,
-                    _fn: filters[selectionType]
-                };
-            }
-        });
+        function selectTypeFilter() {
+            var selectionType = $scope.selectionModel.type;
+            if (!filters[selectionType]) return;
+            $scope.tableOptions.filter = {
+                selectionType: selectionType,
+                _fn: filters[selectionType]
+            };
+        }
+        $scope.$watch('selectionModel.type', selectTypeFilter);
 
         // Data selector collapsing
         $scope.isCollapsed = false;
         $scope.collapse = function (filterType) {
-            if ($scope.selectionModel.type === filterType) {
-                $scope.isCollapsed = true;
-                $scope.selectionModel.type = '';
-            } else {
-                $scope.isCollapsed = false;
-                $scope.selectionModel.type = filterType;
-            }
+            $scope.isCollapsed = $scope.selectionModel.type === filterType;
+            $scope.selectionModel.type = $scope.isCollapsed ? '' : filterType;
         };
 
         // Data table - intialized with the first case available
         // (the case is resolved by router before the controller is ran)
         $scope.selection = [];
-        $scope.project = _project;
         $scope.tableOptions = {
             itemsByPage: 15,
-            project: $scope.project,
+            project: _projects[0],
             genId: 'datalist-all',
             genPackage: 'jbrowse',
             multiSelect: false,
@@ -104,7 +85,7 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
             onConnect: function () {
                 // when JBrowse is initialized, add the ability to select data in the table
                 $scope.$watchCollection('selection', function (items) {
-                    if (!_.isArray(items) || items.length == 0) return;
+                    if (_.isEmpty(items)) return;
                     $scope.jbrowseOptions.addTrack(items[0], config);
                 });
             },
@@ -116,6 +97,12 @@ angular.module('jbrowse.controllers', ['genjs.services', 'jbrowse.services'])
                 }
             },
             keepState: true
+        };
+
+        $scope.clearState = function () {
+            delete localStorage.jbrowseState;
+            $location.search({});
+            setTimeout(function () { location.reload(); }, 0);
         };
     }])
 ;

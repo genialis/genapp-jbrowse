@@ -11,11 +11,11 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
     /**
      * Resolves the first project.
      */
-    .factory('resolveProject', ['$q', '$route', 'Project', function ($q, $route, Project, notify) {
+    .factory('resolveProjects', ['$q', '$route', 'Project', function ($q, $route, Project, notify) {
         return function () {
             var deferred = $q.defer();
             Project.get({}, function (cases) {
-                deferred.resolve(cases.objects[0] || {});
+                deferred.resolve(cases.objects);
             }, function (reason) {
                 var message = "An error occured, sorry";
                 if (reason.status == 404)

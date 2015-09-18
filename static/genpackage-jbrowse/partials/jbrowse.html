@@ -14,6 +14,7 @@
                         Alignment data
                     </button>
                 </label>
+                <button ng-if="$root.dev" class="btn-dev" ng-click="clearState()">Clear state</button>
             </div>
 
             <div collapse="isCollapsed">
@@ -26,10 +27,10 @@
                                     <input id="project-filter" type="text" class="form-control" ng-model="project_filter.$" placeholder="keywords">
                                 </div>
                                 <ul class="list-group">
-                                    <li class="list-group-item case" ng-repeat="case in projectsData.objects | filter:project_filter">
-                                        <div class="title"><a href ng-click="selectProject(case.id);">{{case.name}} <span class="glyphicon glyphicon-chevron-right"></span></a></div>
-                                        <div class="description">{{case.description}}</div>
-                                        <a target="_blank" ng-href="/genboard/#/{{case.url_slug}}/" class="view-gencloud" tooltip="Opens in new tab" tooltip-placement="right">View in GenBoard</a>
+                                    <li class="list-group-item case" ng-repeat="project in projects | filter:project_filter">
+                                        <div class="title"><a href ng-click="selectProject(project);">{{project.name}} <span class="glyphicon glyphicon-chevron-right"></span></a></div>
+                                        <div class="description">{{project.description}}</div>
+                                        <a target="_blank" ng-href="/genboard/#/{{project.url_slug}}/" class="view-gencloud" tooltip="Opens in new tab" tooltip-placement="right">View in GenBoard</a>
                                     </li>
                                 </ul>
                             </div>
