@@ -1,3 +1,11 @@
+@import "genesis/static/bower_components/bootstrap/less/variables.less";
+@import "genesis/static/bower_components/bootstrap/less/mixins/vendor-prefixes.less";
+@import "genesis/static/bower_components/bootstrap/less/mixins/text-emphasis.less";
+
+.gen-browser-container {
+    position: relative;
+    margin: auto;
+}
 .gen-browser {
     width: 100%;
     height: 100%;
@@ -16,8 +24,8 @@
         .track-label {
             margin-left: 0px;
 
-            .fade;
             opacity: 0.7;
+            .transition(opacity .2s linear);
             &:hover {
                 opacity: 1;
             }
@@ -27,17 +35,17 @@
             }
         }
         .feature-description {
-            .text-info;
+            .text-emphasis-variant(@state-info-text);
         }
         .base {
             color: white;
             text-shadow: none;
         }
-        .base_n { .label-default; }
-        .base_t { .label-danger; }
-        .base_a { .label-success; }
-        .base_g { .label-warning; }
-        .base_c { .label-primary; }
+        .base_n { background-color: @gray-light; }
+        .base_t { background-color: @brand-danger; }
+        .base_a { background-color: @brand-success; }
+        .base_g { background-color: @brand-warning; }
+        .base_c { background-color: @brand-primary; }
 
         .overview {
             border-color: @panel-default-border;
@@ -65,11 +73,7 @@
     padding-top: 5px;
     padding-bottom: 10px;
 }
-.jbrowse {
-    .gen-browser-container {
-        position: relative;
-        margin: auto;
-    }
+.jbrowseApp {
     .cases {
         .case-list {
             .list-group {
