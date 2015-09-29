@@ -497,6 +497,9 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         dojo.destroy($scope.browser.menuBar);
                         $scope.tracks = [];
                         if ($scope.options.keepState) loadStateConfigs();
+
+                        var scrollbar = $($scope.browser.view.verticalScrollBar.container);
+                        scrollbar.parent().parent().append(scrollbar);
                     });
                     // make sure tracks detached from the view ('hidden') actually are deleted in the browser instance
                     $scope.browser.subscribe('/jbrowse/v1/c/tracks/hide', function (trackCfgs) {
