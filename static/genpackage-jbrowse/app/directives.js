@@ -45,11 +45,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
             controller: ['$scope', '$q', '$timeout', '$filter', '$injector', 'TestFile', 'notify', 'genBrowserId', 'supportedTypes', 'upperTypes', function ($scope, $q, $timeout, $filter, $injector, TestFile, notify, genBrowserId, supportedTypes, upperTypes) {
                 var escUrl,
                     defaultConfig,
-                    resolvedDefer,
-                    resolvedPromise,
                     typeHandlers,
-                    beforeAdd,
-                    addTrackInner,
                     purgeRefSeqs,
                     reloadRefSeqs,
                     preConnect,
@@ -61,16 +57,13 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     containerID: genBrowserId.generateId()
                 };
                 $scope.config = $.extend(true, {}, defaultConfig, $scope.options.config);
-                resolvedDefer = $q.defer();
-                resolvedDefer.resolve();
-                resolvedPromise = resolvedDefer.promise;
 
                 function fileUrl(id, filename, dontEscape) {
                     return '/data/' + id + '/' + (dontEscape ? filename : escUrl(filename));
                 }
 
                 // Before add handler for each data type.
-                beforeAdd = {
+                var beforeAdd = {
                     'data:genome:fasta:': function (config) {
                         var purgeStorePromise = purgeRefSeqs(config.label),
                             reloadDeferred = $q.defer();
@@ -247,27 +240,13 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 };
 
                 loadStateConfigs = function () {
-                    var lastPromise,
-                        StateUrl;
-
-                    StateUrl = $injector.get('StateUrl');
+                    var StateUrl = $injector.get('StateUrl');
                     $scope.tracks = StateUrl($scope, ['tracks']).tracks || [];
-                    _.each($scope.tracks, function(cfg) {
-                        var d = $q.defer();
-                        if (_.isUndefined(lastPromise)) {
-                            lastPromise = d.promise;
-                            addTrackInner(cfg).then(function () {
-                                d.resolve();
-                            });
-                        } else {
-                            lastPromise.then(function () {
-                                addTrackInner(cfg).then(function () {
-                                    d.resolve();
-                                });
-                            });
-                            lastPromise = d.promise;
-                        }
-                    });
+                    _.reduce($scope.tracks, function (prevPromise, track) {
+                        return prevPromise.then(function () {
+                            return addTrackInner(track);
+                        });
+                    }, $q.when());
                 };
 
                 // Gets JBrowse track. Searches by label.
@@ -346,20 +325,22 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     return deferredSetup;
                 };
 
-                // Adds track to JBrowse.
-                addTrackInner = function (trackCfg, config) {
+                function addTrackInner(trackCfg, config) {
+                    return $q.when(addTrackInnerInner(trackCfg, config));
+                }
+                function addTrackInnerInner(trackCfg, config) { // Adds track to JBrowse.
                     var isSequenceTrack = trackCfg.type == 'JBrowse/View/Track/Sequence';
 
                     if (!trackCfg.genialisType) throw new Error('Track is missing genialisType');
                     var cfgUpperType = config && upperTypes(trackCfg.genialisType).getHighestIn(config);
                     if (cfgUpperType) $.extend(trackCfg, config[cfgUpperType]);
 
-                    if (trackCfg.dontAdd) return resolvedPromise;
+                    if (trackCfg.dontAdd) return;
 
                     var alreadyExists = trackCfg.genialisId && getTrackById(trackCfg.genialisId);
                     if (alreadyExists) {
                         notify({message: "Track " + trackCfg.label + " is already present in the viewport.", type: "danger"});
-                        return resolvedPromise;
+                        return;
                     }
 
                     // must have unique label because jBrowse.showTracks uses labels as ids
@@ -381,14 +362,12 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     }
 
                     return deferred.promise.then(function (wasSuccessful) {
-                        var load;
-
                         if (!wasSuccessful) {
                             notify({message: 'Because there was an issue with track ' + trackCfg.label + ', it will not be shown', type: 'error'});
                             return;
                         }
 
-                        load = function () {
+                        function load() {
                             // prepare for config loading.
                             $scope.browser.config.include = [];
                             if ($scope.browser.reachedMilestone('loadConfig')) {
@@ -419,7 +398,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                 }
                                 return true;
                             });
-                        };
+                        }
 
                         if (trackCfg.genialisType in beforeAdd) {
                             return beforeAdd[trackCfg.genialisType](trackCfg).then(load);
@@ -449,15 +428,10 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                  *  config[genialisType] can also contain dontAdd property, which will prevent track from being added.
                  */
                 $scope.options.addTrack = function (item, config) {
-                    var maybePromise;
-
                     var handlableUpperType = upperTypes(item.type).getHighestIn(typeHandlers);
                     if (!handlableUpperType) throw new Error('No handler for data type ' + item.type + ' defined.');
-                    maybePromise = typeHandlers[handlableUpperType](item, config);
-                    // definitely promise
-                    return resolvedPromise.then(function () {
-                        return maybePromise;
-                    });
+                    var maybePromise = typeHandlers[handlableUpperType](item, config);
+                    return $q.when(maybePromise); // definitely promise
                 };
 
                 $scope.options.removeTracks = function (tracks) {
