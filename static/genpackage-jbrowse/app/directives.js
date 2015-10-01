@@ -242,11 +242,9 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 loadStateConfigs = function () {
                     var StateUrl = $injector.get('StateUrl');
                     $scope.tracks = StateUrl($scope, ['tracks']).tracks || [];
-                    _.reduce($scope.tracks, function (prevPromise, track) {
-                        return prevPromise.then(function () {
-                            return addTrackInner(track);
-                        });
-                    }, $q.when());
+                    _.each($scope.tracks, function (track) {
+                        addTrackInner(track);
+                    });
                 };
 
                 // Gets JBrowse track. Searches by label.
@@ -325,8 +323,12 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     return deferredSetup;
                 };
 
+                var prevTrackPromise = $q.when();
                 function addTrackInner(trackCfg, config) {
-                    return $q.when(addTrackInnerInner(trackCfg, config));
+                    prevTrackPromise = prevTrackPromise.then(function () {
+                        return addTrackInnerInner(trackCfg, config);
+                    });
+                    return prevTrackPromise;
                 }
                 function addTrackInnerInner(trackCfg, config) { // Adds track to JBrowse.
                     var isSequenceTrack = trackCfg.type == 'JBrowse/View/Track/Sequence';
@@ -406,7 +408,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                             return load();
                         }
                     });
-                };
+                }
 
                 // Publicly exposed API.
                 /**
