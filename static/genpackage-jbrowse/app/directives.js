@@ -326,13 +326,18 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                 function orderTracks() {
                     var view = $scope.browser.view;
-                    view.tracks = _.sortBy(_.sortBy(view.tracks, 'name'), function (track) {
-                        return track.config.genialisIndex;
+                    var sortedTrackElems = _.sortBy(view.trackContainer.children, function (el) { // non-tracks first, low genialisIndex second, alphabet names third
+                        return [
+                            el.track ? 2 : 1,
+                            _.path(el, 'track.config.genialisIndex') || Infinity,
+                            _.path(el, 'track.name')
+                        ];
                     });
-                    _.each(view.tracks, function (track, ix) { track.index = ix; });
-                    view.trackIndices = _.invertIndex(_.map(view.tracks, 'name'));
-                    view.trackHeights = _.map(view.tracks, 'height');
-                    view.redrawTracks();
+
+                    _.each(sortedTrackElems, function (el) {
+                        $(el).parent().append(el);
+                    });
+                    view.updateTrackList();
                 }
 
                 var prevTrackPromise = $q.when();
