@@ -26,6 +26,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
          *      :afterAdd:      Dict with data types as keys and callback functions as values. Callback is executed after
          *                      given data type is added to the browser.
          *      :keepState:     boolean indicating whether to load/save state from/to URL.
+         *      :sortByGenialisIndex:  boolean indicating whether to sort tracks by genialisIndex.
          *      :jbrowse:       Directive exposes JBrowse object after connecting
          *
          *      API:
@@ -323,10 +324,29 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     return deferredSetup;
                 };
 
+                function orderTracks() {
+                    var view = $scope.browser.view;
+                    view.tracks = _.sortBy(_.sortBy(view.tracks, 'name'), function (track) {
+                        return track.config.genialisIndex;
+                    });
+                    _.each(view.tracks, function (track, ix) { track.index = ix; });
+                    view.trackIndices = _.invertIndex(_.map(view.tracks, 'name'));
+                    view.trackHeights = _.map(view.tracks, 'height');
+                    view.redrawTracks();
+                }
+
                 var prevTrackPromise = $q.when();
                 function addTrackInner(trackCfg, config) {
                     prevTrackPromise = prevTrackPromise.then(function () {
                         return addTrackInnerInner(trackCfg, config);
+                    }).then(function () {
+                        if ($scope.options.sortByGenialisIndex) {
+                            var onVisibleChanged = $scope.browser.subscribe('/jbrowse/v1/n/tracks/visibleChanged', function () {
+                                if (!_.find($scope.browser.view.tracks, {config: {label: trackCfg.label}})) return;
+                                orderTracks();
+                                onVisibleChanged.remove();
+                            });
+                        }
                     });
                     return prevTrackPromise;
                 }
