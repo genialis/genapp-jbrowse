@@ -476,6 +476,13 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
 
                         var scrollbar = $($scope.browser.view.verticalScrollBar.container);
                         scrollbar.parent().parent().append(scrollbar);
+
+                        dijit.Dialog.prototype.onShow = function () { // when dialog opens, scroll it to top
+                            var dialog = this;
+                            setTimeout(function () { //TODO: find a better way than a timeout
+                                dialog.containerNode.scrollTop = 0;
+                            }, 100);
+                        };
                     });
                     // make sure tracks detached from the view ('hidden') actually are deleted in the browser instance
                     $scope.browser.subscribe('/jbrowse/v1/c/tracks/hide', function (trackCfgs) {
