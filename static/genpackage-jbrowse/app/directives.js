@@ -511,7 +511,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                     });
                     // make sure tracks detached from the view ('hidden') actually are deleted in the browser instance
                     $scope.browser.subscribe('/jbrowse/v1/c/tracks/hide', function (trackCfgs) {
-                        var removedLabels = _.pluck(trackCfgs, 'label');
+                        var removedLabels = _.map(trackCfgs, 'label');
                         $scope.browser.publish('/jbrowse/v1/v/tracks/delete', trackCfgs);
                         $scope.tracks = _.filter($scope.tracks, function (track) {
                             return removedLabels.indexOf(track.label) == -1;
@@ -539,7 +539,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                 containerId: 'gen-browser',
                                 dataRoot: '/data/',
                                 baseUrl: '/data/',
-                                browserRoot: '/static/jbrowse-1.11.4',
+                                browserRoot: '/static/jbrowse-1.11.6',
                                 show_tracklist: false,
                                 show_nav: true,
                                 show_overview: true,
