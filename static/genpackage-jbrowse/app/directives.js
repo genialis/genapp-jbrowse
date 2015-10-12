@@ -495,6 +495,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 connector = function () {
                     // remove global menu bar
                     $scope.browser.afterMilestone('initView', function () {
+                        fixFirstTrackSpace($scope.browser);
+
                         dojo.destroy($scope.browser.menuBar);
                         $scope.tracks = [];
                         if ($scope.options.keepState) loadStateConfigs();
@@ -535,7 +537,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         // monkey-patch. We need to remove default includes, since off-the-shelf version of JBrowse
                         // forces loading of jbrowse.conf even if we pass empty array as includes.
                         Browser.prototype._configDefaults = function () {
-                            return {
+                            return fixTracksSpacingToMoveTrackLabels({
                                 containerId: 'gen-browser',
                                 dataRoot: '/data/',
                                 baseUrl: '/data/',
@@ -555,7 +557,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                                 datasets: {
                                     _DEFAULT_EXAMPLES: false
                                 }
-                            };
+                            });
                         };
 
                         if (!('plugins' in $scope.config)) {
@@ -569,6 +571,13 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         connector();
                     });
                 });
+
+                function fixTracksSpacingToMoveTrackLabels(defaults) {
+                    return _.setPath(defaults, 'view.trackPadding', 50);
+                }
+                function fixFirstTrackSpace(browser) {
+                    browser.view.topSpace = 60;
+                }
 
                 // Destroy everything, otherwise jBrowse doesnt want to initialize again (unless page reloaded)
                 $scope.$on('$destroy', function () {
