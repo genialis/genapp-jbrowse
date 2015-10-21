@@ -47,7 +47,6 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 var escUrl,
                     defaultConfig,
                     typeHandlers,
-                    purgeRefSeqs,
                     reloadRefSeqs,
                     preConnect,
                     connector,
@@ -66,10 +65,8 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 // Before add handler for each data type.
                 var beforeAdd = {
                     'data:genome:fasta:': function (config) {
-                        var purgeStorePromise = purgeRefSeqs(config.label),
-                            reloadDeferred = $q.defer();
-
-                        purgeStorePromise.then(function () {
+                        var reloadDeferred = $q.defer();
+                        purgeRefSeqs().then(function () {
                             reloadRefSeqs(config.baseUrl + '/refSeqs.json').then(function () {
                                 reloadDeferred.resolve();
                             });
@@ -257,19 +254,13 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                 }
 
                 // Purges reference sequence store.
-                purgeRefSeqs = function (label) {
+                function purgeRefSeqs() {
                     var purgeStoreDefer = $q.defer();
                     if ($scope.browser.config.stores) {
                         // Purge refseqs store before loading new one.
                          $scope.browser.getStore('refseqs', function (store) {
-                            var seqTrackName;
                             if (!store) {
                                 purgeStoreDefer.resolve();
-                                return;
-                            }
-                            seqTrackName = store.config.label;
-                            if (label == seqTrackName) {
-                                purgeStoreDefer.reject();
                                 return;
                             }
                             // remove all tracks if we're changing sequence.
@@ -282,7 +273,7 @@ angular.module('jbrowse.directives', ['genjs.services', 'jbrowse.services'])
                         purgeStoreDefer.resolve();
                     }
                     return purgeStoreDefer.promise;
-                };
+                }
 
                 // Reloads reference sequences.
                 reloadRefSeqs = function (newRefseqsUrl) {
