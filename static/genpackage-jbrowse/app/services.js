@@ -17,12 +17,12 @@ angular.module('jbrowse.services', ['ngResource', 'genjs.services'])
             Project.get({}, function (cases) {
                 deferred.resolve(cases.objects);
             }, function (reason) {
-                var message = "An error occured, sorry";
+                var message = "An error occurred, sorry";
                 if (reason.status == 404)
                     message = "No project found.";
                 else if (reason.status == 401)
                     message = "You do not have permission to view this case";
-                notify({message: "An error occured, sorry", type: 'danger'});
+                notify({message: "An error occurred, sorry", type: 'danger'});
                 deferred.reject(message);
             });
             return deferred.promise;
